@@ -105,8 +105,24 @@ def main():
         
         if download_url:
             print(f"[INFO] Iniciando download: {download_url}")
-            # Aqui você pode usar o mesmo fluxo de stream_download do Sentinel
             print("[AVISO] Arquivos Landsat podem ser muito grandes (>1GB).")
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            file_name = selected['displayId'] + ".tar"
+            out_path = OUTPUT_DIR / file_name
+            headers = {"X-Auth-Token": api_key}
+            print(f"[INFO] Salvando em: {out_path}")
+            with requests.get(download_url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                total = int(r.headers.get("content-length", 0))
+                downloaded = 0
+                with open(out_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total:
+                            pct = downloaded / total * 100
+                            print(f"\r[INFO] Progresso: {pct:.1f}% ({downloaded/(1024**2):.1f} MB / {total/(1024**2):.1f} MB)", end="", flush=True)
+            print(f"\n[INFO] Download concluído! Arquivo salvo em: {out_path}")
         else:
             print("[INFO] O download foi solicitado, mas o link ainda não está pronto (processamento em fila).")
     
